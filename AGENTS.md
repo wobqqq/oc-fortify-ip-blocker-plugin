@@ -4,7 +4,7 @@ Guidance for AI coding agents (Claude Code, Codex, Junie, Cursor) working in thi
 
 ## What this is
 
-**IP Blocker** (`Wobqqq.FortifyIpBlocker`) is a paid module of the Fortify security suite for October CMS 3.x/4.x (built and tested against 4.4 on Laravel 12, PHP 8.2+). It refuses every request from the IP addresses and subnets (IPv4 and IPv6, CIDR notation) the administrator lists, on the site and in the backend, answering 403 with the page the administrator chose.
+**IP Blocker** (`Wobqqq.FortifyIpBlocker`) is a free module of the Fortify security suite for October CMS 3.x/4.x (built and tested against 4.4 on Laravel 12, PHP 8.2+). It refuses every request from the IP addresses and subnets (IPv4 and IPv6, CIDR notation) the administrator lists, on the site and in the backend, answering 403 with the page the administrator chose.
 
 It requires the core plugin [`Wobqqq.Fortify`](https://github.com/wobqqq/oc-fortify-plugin): the settings live in the core's `Wobqqq\Fortify\Models\Fortify` record under the `ip_firewall.ip_blocker_*` key and appear on **Settings → Fortify**, and the module draws its own item on the core's dashboard widget.
 
