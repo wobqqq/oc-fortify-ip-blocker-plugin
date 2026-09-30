@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Wobqqq\FortifyIpBlocker\Services;
 
 use App;
-use Arr;
 use Config;
+use Illuminate\Support\Collection;
 use October\Rain\Router\CoreRouter;
 use Symfony\Component\HttpFoundation\IpUtils;
 use Wobqqq\Fortify\Models\Fortify;
@@ -47,95 +47,70 @@ final class IpBlockerService
             return true;
         }
 
-        if (empty($ipBlockerDto->cidrRanges) && empty($ipBlockerDto->exactIps)) {
-            return true;
-        }
-
         if (isset($ipBlockerDto->exactIps[$ip])) {
             return false;
         }
 
-        if (empty($ipBlockerDto->cidrRanges)
-            || !IpUtils::checkIp($ip, $ipBlockerDto->cidrRanges)) {
-            return true;
-        }
+        $blockedIps = array_merge($ipBlockerDto->cidrRanges, array_map(strval(...), array_keys($ipBlockerDto->exactIps)));
 
-        return false;
+        return $blockedIps === [] || !IpUtils::checkIp($ip, $blockedIps);
     }
 
     public function removeIp(string $ip): void
     {
         $ip = trim($ip);
 
-        if (empty($ip)) {
+        if ($ip === '') {
             return;
         }
 
-        /** @var array<string, mixed>|\Illuminate\Support\Collection<int, mixed> $ipFirewall */
-        $ipFirewall = Fortify::get('ip_firewall');
+        $ipFirewall = $this->ipFirewall();
+        $ipBlockerIps = $ipFirewall['ip_blocker_ips'] ?? [];
 
-        if ($ipFirewall instanceof \Illuminate\Support\Collection) {
-            $ipFirewall = $ipFirewall->toArray();
-        }
-
-        $ipFirewall = !is_array($ipFirewall) ? [] : $ipFirewall;
-
-        /** @var array<int, array<string, string>> $ipBlockerIps */
-        $ipBlockerIps = Arr::get($ipFirewall, 'ip_blocker_ips', []);
-
-        if (empty($ipBlockerIps)) {
+        if (!is_array($ipBlockerIps) || $ipBlockerIps === []) {
             return;
         }
 
-        foreach ($ipBlockerIps as $key => $ipBlockerIp) {
-            /** @var string|null $ipBlockerIp */
-            $ipBlockerIp = Arr::get((array)$ipBlockerIp, 'ip');
-            $ipBlockerIp = trim((string)$ipBlockerIp);
-
-            if ($ip === $ipBlockerIp) {
-                unset($ipBlockerIps[$key]);
-            }
-        }
-
-        $ipFirewall['ip_blocker_ips'] = $ipBlockerIps;
+        $ipFirewall['ip_blocker_ips'] = array_values(array_filter(
+            $ipBlockerIps,
+            static fn (mixed $row): bool => !is_array($row) || !is_string($row['ip'] ?? null) || trim($row['ip']) !== $ip,
+        ));
 
         Fortify::set('ip_firewall', $ipFirewall);
     }
 
     public function disable(): void
     {
-        /** @var array<string, mixed>|\Illuminate\Support\Collection<int, mixed> $ipFirewall */
-        $ipFirewall = Fortify::get('ip_firewall');
-
-        if ($ipFirewall instanceof \Illuminate\Support\Collection) {
-            $ipFirewall = $ipFirewall->toArray();
-        }
-
-        $ipFirewall = !is_array($ipFirewall) ? [] : $ipFirewall;
+        $ipFirewall = $this->ipFirewall();
 
         $ipFirewall['ip_blocker_enabled'] = false;
 
         Fortify::set('ip_firewall', $ipFirewall);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function ipFirewall(): array
+    {
+        /** @var array<string, mixed>|Collection<string, mixed>|null $ipFirewall */
+        $ipFirewall = Fortify::get('ip_firewall');
+
+        if ($ipFirewall instanceof Collection) {
+            $ipFirewall = $ipFirewall->all();
+        }
+
+        return is_array($ipFirewall) ? $ipFirewall : [];
+    }
+
     private function overrideConfig(string $configName): void
     {
-        /** @var string|null|array<int, string> $middleware */
         $middleware = Config::get($configName, []);
-
-        if (is_string($middleware)) {
-            $middleware = [$middleware];
-        }
-
-        if (empty($middleware)) {
-            $middleware = [];
-        }
+        $middleware = is_string($middleware) ? [$middleware] : (is_array($middleware) ? $middleware : []);
+        $middleware = array_filter($middleware, static fn (mixed $name): bool => is_string($name) && $name !== '');
 
         $middleware[] = IpBlockerMiddleware::ALIAS;
-        /** @var array<int, string> $middleware */
-        $middleware = array_unique($middleware);
-        $middleware = array_filter($middleware);
 
-        Config::set($configName, $middleware);
+        Config::set($configName, array_values(array_unique($middleware)));
     }
 }

@@ -2,3 +2,5 @@ v1.0.1:
     - 'First version'
 v1.0.2:
     - 'Changes in events'
+v1.0.3:
+    - 'IPv6 addresses match however they are written, a subnet that covers the administrator is refused, the default settings are always set and the settings are applied as soon as they are saved'

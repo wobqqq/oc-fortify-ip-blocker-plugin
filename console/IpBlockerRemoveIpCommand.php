@@ -18,13 +18,21 @@ final class IpBlockerRemoveIpCommand extends Command
     /** @var string */
     protected $description = 'Remove an IP from the IP blocker blacklist.';
 
-    public function handle(IpBlockerService $ipBlockerService): void
+    public function handle(IpBlockerService $ipBlockerService): int
     {
-        /** @var string|null $ip */
         $ip = $this->argument('ip');
+        $ip = is_string($ip) ? trim($ip) : '';
 
-        $ipBlockerService->removeIp((string)$ip);
+        if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
+            $this->error(sprintf('%s is not an IP address.', $ip));
+
+            return self::FAILURE;
+        }
+
+        $ipBlockerService->removeIp($ip);
 
         $this->info(sprintf('IP %s has been removed from the blacklist.', $ip));
+
+        return self::SUCCESS;
     }
 }

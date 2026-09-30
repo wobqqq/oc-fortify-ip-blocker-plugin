@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Wobqqq\FortifyIpBlocker\Listeners;
 
-use Arr;
 use Backend;
 use Backend\Widgets\Form;
 use October\Rain\Events\Dispatcher;
@@ -27,39 +26,40 @@ final readonly class FortifyListener
 
     /**
      * @param Dispatcher $event
-     * @return void
      */
     public function subscribe($event): void
     {
-        $event->listen(FortifyEvent::SERVICES_WIDGET_GROUP_ITEM_IP_BLOCKER->value, function (WidgetGroupItemDto &$widgetGroupItemDto) {
+        $event->listen(FortifyEvent::SERVICES_WIDGET_GROUP_ITEM_IP_BLOCKER->value, function (WidgetGroupItemDto &$widgetGroupItemDto): void {
             $this->serveWidgetGroupItem($widgetGroupItemDto);
         });
 
-        $event->listen(FortifyEvent::MODEL_FORTIFY_INIT_SETTINGS_DATA->value, function (Fortify &$fortify) {
+        $event->listen(FortifyEvent::MODEL_FORTIFY_INIT_SETTINGS_DATA->value, function (Fortify &$fortify): void {
             $this->serveModelInitSettingsData($fortify);
         });
 
-        Fortify::extend(function (Fortify $fortify) {
+        Fortify::extend(function (Fortify $fortify): void {
             $this->serveModel($fortify);
-
-            $fortify->bindEvent('model.beforeSave', function () use ($fortify) {
-                $this->filterEmptyIPs($fortify, 'ip_blocker_ips');
-            });
-
-            $fortify->bindEvent('model.afterSave', function () {
-                $this->ipBlockerDtoCache->clear();
-            });
-
-            $fortify->bindEvent('model.afterDelete', function () {
-                $this->ipBlockerDtoCache->clear();
-            });
         });
 
-        $event->listen('backend.form.extendFields', function (Form $form) {
+        // Model events, not bindEvent(): the settings instance may predate this listener.
+        $event->listen('eloquent.saving: ' . Fortify::class, function (Fortify $fortify): void {
+            $this->filterEmptyIps($fortify);
+        });
+
+        $event->listen(
+            ['eloquent.saved: ' . Fortify::class, 'eloquent.deleted: ' . Fortify::class],
+            function (): void {
+                $this->ipBlockerDtoCache->clear();
+            },
+        );
+
+        $event->listen('backend.form.extendFields', function (Form $form): void {
             if (!$form->getController() instanceof Settings || !$form->model instanceof Fortify || $form->isNested) {
                 return;
             }
 
+            $this->serveModel($form->model);
+            $this->serveModelInitSettingsData($form->model);
             $this->serveFields($form);
         });
     }
@@ -72,7 +72,7 @@ final readonly class FortifyListener
             'icon-wrench',
         );
         $ipBlockerDto = IpBlockerDtoInstance::instance()->get();
-        $color = $ipBlockerDto->enabled === true ? WidgetItemColor::SUCCESS : WidgetItemColor::DANGER;
+        $color = $ipBlockerDto->enabled ? WidgetItemColor::SUCCESS : WidgetItemColor::DANGER;
         $widgetGroupItemDto = FortifyTransformer::widgetGroupItemDto(
             'wobqqq.fortify::lang.fields.ip_blocker',
             [$settingsLink],
@@ -83,16 +83,11 @@ final readonly class FortifyListener
 
     private function serveModelInitSettingsData(Fortify $fortify): void
     {
-        $ipFirewall = (isset($fortify->ip_firewall) && is_array($fortify->ip_firewall)) ? $fortify->ip_firewall : [];
+        $ipFirewall = is_array($fortify->ip_firewall) ? $fortify->ip_firewall : [];
 
-        if (!empty($ipFirewall)) {
-            return;
-        }
+        $ipFirewall['ip_blocker_enabled'] ??= false;
+        $ipFirewall['ip_blocker_view'] ??= View::DENIED->value;
 
-        $ipFirewall['ip_blocker_enabled'] = false;
-        $ipFirewall['ip_blocker_view'] = View::DENIED->value;
-        /** @noinspection PhpUndefinedFieldInspection */
-        /** @phpstan-ignore-next-line */
         $fortify->ip_firewall = $ipFirewall;
     }
 
@@ -171,26 +166,19 @@ final readonly class FortifyListener
         ]);
     }
 
-    private function filterEmptyIPs(Fortify $fortify, string $fieldName): void
+    private function filterEmptyIps(Fortify $fortify): void
     {
-        if (isset($fortify->ip_firewall) && is_array($fortify->ip_firewall)) {
-            /** @var array<string, mixed> $ipFirewall */
-            $ipFirewall = $fortify->ip_firewall;
-            /** @var array<int, array<string, string|null>> $ipsTable */
-            $ipsTable = Arr::get($ipFirewall, $fieldName, []);
+        $ipFirewall = $fortify->ip_firewall;
 
-            foreach ($ipsTable as $key => $row) {
-                /** @var string|null $ip */
-                $ip = Arr::get($row, 'ip');
-                $ip = trim((string)$ip);
-
-                if (empty($ip)) {
-                    unset($ipsTable[$key]);
-                }
-            }
-
-            $ipFirewall[$fieldName] = $ipsTable;
-            $fortify->ip_firewall = $ipFirewall;
+        if (!is_array($ipFirewall) || !is_array($ipFirewall['ip_blocker_ips'] ?? null)) {
+            return;
         }
+
+        $ipFirewall['ip_blocker_ips'] = array_values(array_filter(
+            $ipFirewall['ip_blocker_ips'],
+            static fn (mixed $row): bool => is_array($row) && is_scalar($row['ip'] ?? null) && trim((string)$row['ip']) !== '',
+        ));
+
+        $fortify->ip_firewall = $ipFirewall;
     }
 }

@@ -4,41 +4,36 @@ declare(strict_types=1);
 
 namespace Wobqqq\FortifyIpBlocker\Validator\Rules;
 
-use Arr;
 use Lang;
 use Request;
+use Symfony\Component\HttpFoundation\IpUtils;
 
 final class IpBlockerCurrentIpRule
 {
     /**
-     * @param string $attribute
-     * @param mixed $value
+     * The administrator who saves the list must not block themselves, by address or by subnet.
+     *
      * @param array<mixed, mixed> $params
-     * @return bool
      */
-    public function validate(string $attribute, $value, $params): bool
+    public function validate(string $attribute, mixed $value, array $params): bool
     {
-        /** @var \Illuminate\Contracts\Foundation\Application $app */
-        $app = app();
-        $isConsole = $app->runningInConsole();
-        $currenIp = Request::ip();
+        $currentIp = Request::ip();
 
-        if ($isConsole || empty($currenIp) || empty($value) || !is_array($value)) {
+        if (app()->runningInConsole() || !is_string($currentIp) || $currentIp === '' || !is_array($value)) {
             return true;
         }
 
-        /** @var array<int, array<string, string|null>> $ips */
-        $ips = $value;
+        $ips = [];
 
-        foreach ($ips as $ip) {
-            $ip = Arr::get($ip, 'ip');
+        foreach ($value as $row) {
+            $ip = is_array($row) && is_string($row['ip'] ?? null) ? trim($row['ip']) : '';
 
-            if ($currenIp === $ip) {
-                return false;
+            if ($ip !== '') {
+                $ips[] = $ip;
             }
         }
 
-        return true;
+        return $ips === [] || !IpUtils::checkIp($currentIp, $ips);
     }
 
     public function message(): string
@@ -46,7 +41,7 @@ final class IpBlockerCurrentIpRule
         /** @var string $message */
         $message = Lang::get(
             'wobqqq.fortify::lang.validator_rules.ip_blocker_current_ip',
-            ['ip' => Request::ip()],
+            ['ip' => e((string)Request::ip())],
         );
 
         return $message;

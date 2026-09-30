@@ -7,28 +7,25 @@ namespace Wobqqq\FortifyIpBlocker\Http\Middlewares;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View as IlluminateView;
+use Symfony\Component\HttpFoundation\Response;
 use Wobqqq\Fortify\Enums\View;
 use Wobqqq\FortifyIpBlocker\Instances\IpBlockerDtoInstance;
 use Wobqqq\FortifyIpBlocker\Services\IpBlockerService;
 
-final class IpBlockerMiddleware
+final readonly class IpBlockerMiddleware
 {
     public const ALIAS = 'fortify_ip_blocker';
 
-    public function __construct(private readonly IpBlockerService $ipBlockerService)
+    public function __construct(private IpBlockerService $ipBlockerService)
     {
     }
 
     /**
-     * @param Request $request
-     * @param Closure $next
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response|mixed
+     * @param Closure(Request): mixed $next
      */
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): mixed
     {
-        $ip = $request->ip();
-
-        if ($this->ipBlockerService->check((string)$ip)) {
+        if ($this->ipBlockerService->check((string)$request->ip())) {
             return $next($request);
         }
 
@@ -41,6 +38,6 @@ final class IpBlockerMiddleware
         /** @var \Illuminate\Routing\ResponseFactory $response */
         $response = response();
 
-        return $response->view($view, [], 403);
+        return $response->view($view, [], Response::HTTP_FORBIDDEN);
     }
 }

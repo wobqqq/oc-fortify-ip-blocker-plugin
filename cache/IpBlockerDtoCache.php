@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wobqqq\FortifyIpBlocker\Cache;
 
 use Illuminate\Support\Facades\Cache;
+use Throwable;
 use Wobqqq\Fortify\Cache\BasicCache;
 use Wobqqq\FortifyIpBlocker\Dto\IpBlockerDto;
 use Wobqqq\FortifyIpBlocker\Transformers\FortifyTransformer;
@@ -15,12 +16,14 @@ final class IpBlockerDtoCache extends BasicCache
     {
         $cacheKey = $this->cacheKey();
 
-        /** @var IpBlockerDto $ipBlockerDto */
-        $ipBlockerDto = Cache::remember($cacheKey, self::TTL, function () {
-            return FortifyTransformer::ipBlockerDto();
-        });
+        try {
+            $ipBlockerDto = Cache::remember($cacheKey, self::TTL, FortifyTransformer::ipBlockerDto(...));
+        } catch (Throwable) {
+            Cache::forget($cacheKey);
+            $ipBlockerDto = null;
+        }
 
-        return $ipBlockerDto;
+        return $ipBlockerDto instanceof IpBlockerDto ? $ipBlockerDto : FortifyTransformer::ipBlockerDto();
     }
 
     public function clear(): void

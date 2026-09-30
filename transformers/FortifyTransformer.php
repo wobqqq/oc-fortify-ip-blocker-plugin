@@ -13,43 +13,36 @@ final readonly class FortifyTransformer
 {
     public static function ipBlockerDto(): IpBlockerDto
     {
-        /** @var bool|int|null $enabled */
-        $enabled = Fortify::get('ip_firewall.ip_blocker_enabled');
-        $enabled = (bool)$enabled;
+        $enabled = (bool)Fortify::get('ip_firewall.ip_blocker_enabled');
 
-        /** @var string|null $view */
         $view = Fortify::get('ip_firewall.ip_blocker_view');
-        $view = (string)$view;
-        $view = empty($view) || !IlluminateView::exists($view) ? View::DENIED->value : $view;
+        $view = is_string($view) && $view !== '' && IlluminateView::exists($view) ? $view : View::DENIED->value;
+
+        $cidrRanges = [];
+        $exactIps = [];
 
         if ($enabled) {
-            /** @var array<int, string>|null $ips */
-            $ips = Fortify::get('ip_firewall.ip_blocker_ips');
-            $ips = (empty($ips) || !is_array($ips)) ? [] : $ips;
-            /** @var array<int, string> $ips */
-            $ips = array_column($ips, 'ip');
-            $ips = array_unique($ips);
-            $ips = array_filter($ips);
+            $rows = Fortify::get('ip_firewall.ip_blocker_ips');
 
-            $cidrRanges = [];
-            $exactIps = [];
+            foreach (is_array($rows) ? $rows : [] as $row) {
+                $ip = is_array($row) && is_scalar($row['ip'] ?? null) ? trim((string)$row['ip']) : '';
 
-            foreach ($ips as $ip) {
+                if ($ip === '') {
+                    continue;
+                }
+
                 if (str_contains($ip, '/')) {
                     $cidrRanges[] = $ip;
                 } else {
                     $exactIps[$ip] = 1;
                 }
             }
-        } else {
-            $cidrRanges = [];
-            $exactIps = [];
         }
 
         return new IpBlockerDto(
             $enabled,
             $view,
-            $cidrRanges,
+            array_values(array_unique($cidrRanges)),
             $exactIps,
         );
     }
