@@ -1,5 +1,11 @@
 # IP Blocker
 
+[![CI](https://github.com/wobqqq/oc-fortify-ip-blocker-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/wobqqq/oc-fortify-ip-blocker-plugin/actions/workflows/ci.yml)
+[![October CMS](https://img.shields.io/badge/October%20CMS-3.x%20%7C%204.x-e24848)](https://octobercms.com/plugin/wobqqq-fortifyipblocker)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-777bb4)](composer.json)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%20max-brightgreen)](phpstan.neon.dist)
+[![License](https://img.shields.io/badge/License-Commercial-orange)](LICENSE.md)
+
 **IP Blocker** allows administrators to manually block specific IP addresses directly from the admin panel.
 
 It works as part of the [Fortify](https://octobercms.com/plugin/wobqqq-fortify) ecosystem and adds an extra layer of protection against malicious users.
@@ -32,7 +38,8 @@ This widget acts as a central hub, allowing you to monitor and manage your appli
 ## 📦 Requirements
 
 - PHP 8.2 or higher
-- October CMS 3.0 or higher
+- October CMS 3.x or 4.x
+- [Fortify](https://octobercms.com/plugin/wobqqq-fortify)
 
 ## 💻 Usage
 
@@ -44,7 +51,7 @@ Navigate to `Settings -> Fortify` and enable **IP Blocker**. You can add or remo
 **Console Commands:**
 
 - Remove a blocked IP:
--
+
 ```bash
 php artisan wobqqq.fortify:ip-blocker:remove-ip {ip}
 ```
@@ -54,3 +61,31 @@ php artisan wobqqq.fortify:ip-blocker:remove-ip {ip}
 ```bash
 php artisan wobqqq.fortify:ip-blocker:disable
 ```
+
+## ⬆️ Upgrading
+
+- **1.0.3** — an IPv6 address is blocked however it is written (`2001:db8::1` and `2001:0db8:0:0:0:0:0:1` are the same address). Saving a list is refused when one of its subnets covers your own address, as it already was for the address itself. The module's defaults are set even when another Fortify module set up the firewall settings first, and a saved list applies at once.
+
+## ⚠️ Good to know
+
+- Behind a load balancer, proxy or CDN, configure October's trusted proxies so that the visitor's IP, not the proxy's, is checked.
+- Blocking addresses stops a known source, it does not replace a firewall: an attacker can change address, and traffic you never want to reach PHP is best refused by the web server.
+
+## 🔒 Security
+
+Please report a vulnerability privately, as described in [SECURITY.md](SECURITY.md).
+
+## 🛠️ Development
+
+The toolchain runs in Docker, the host needs nothing but `docker` and `make`. The module is tested together with the [Fortify core](https://github.com/wobqqq/oc-fortify-plugin), which Composer installs from its `main` branch.
+
+```bash
+make install        # composer install
+make code.fix       # composer normalize, Rector, PHP CS Fixer
+make code.check     # composer validate/audit, php -l, YAML lint, PHP CS Fixer, Rector, PHPStan (level max)
+make test.coverage  # Pest with coverage (90 % minimum)
+make ready          # everything above
+```
+
+Every pull request runs the same checks on GitHub Actions, plus a syntax check on PHP 8.2 and a run against the latest core. Pushing a tag that matches the last version in `updates/version.yaml` releases it to the October CMS marketplace once CI has passed.
+
