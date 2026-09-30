@@ -10,7 +10,10 @@
         "security",
         "ip-blocker",
         "firewall",
-        "fortify"
+        "fortify",
+        "laravel",
+        "ip-blacklist",
+        "blocklist"
     ],
     "authors": [
         {
@@ -18,10 +21,11 @@
             "homepage": "https://github.com/wobqqq"
         }
     ],
-    "homepage": "https://github.com/wobqqq/oc-fortify-ip-blocker-plugin",
+    "homepage": "https://octobercms.com/plugin/wobqqq-fortifyipblocker",
     "support": {
         "issues": "https://github.com/wobqqq/oc-fortify-ip-blocker-plugin/issues",
         "source": "https://github.com/wobqqq/oc-fortify-ip-blocker-plugin",
+        "docs": "https://github.com/wobqqq/oc-fortify-ip-blocker-plugin#readme",
         "security": "https://github.com/wobqqq/oc-fortify-ip-blocker-plugin/security/policy"
     },
     "require": {
