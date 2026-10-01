@@ -14,7 +14,7 @@ It works as part of the [Fortify](https://octobercms.com/plugin/wobqqq-fortify) 
 
 ## 📊 Security Dashboard Widget
 
-Fortify includes a built-in dashboard widget that gives you a real-time overview of your system’s security status.
+Fortify includes a dashboard widget that gives you an overview of your application’s security status.
 
 - Highlights critical vulnerabilities and misconfigurations
 - Provides quick access to all security checks and tools
@@ -24,7 +24,7 @@ This widget acts as a central hub, allowing you to monitor and manage your appli
 
 ## 🚀 Features
 
-- Manual IP blocking
+- Manual blocking of IP addresses and subnets, on the site and in the backend
 - Instant protection against malicious users
 - Simple and intuitive interface
 - Works together with [Smart IP Blocker](https://octobercms.com/plugin/wobqqq-fortifysmartipblocker) for automated protection
@@ -51,7 +51,7 @@ This widget acts as a central hub, allowing you to monitor and manage your appli
 | **Artisan** | `php artisan plugin:install Wobqqq.FortifyIpBlocker` |
 | **Composer** | `composer require wobqqq/fortifyipblocker-plugin` then `php artisan october:migrate` |
 
-It needs the [Fortify](https://octobercms.com/plugin/wobqqq-fortify) core plugin: Composer installs it with the module, from the marketplace install **Fortify** first.
+It needs the [Fortify](https://octobercms.com/plugin/wobqqq-fortify) core plugin: Composer installs it with the module; when installing from the marketplace, install **Fortify** first.
 
 ## 💻 Usage
 
@@ -76,6 +76,7 @@ php artisan wobqqq.fortify:ip-blocker:disable
 
 ## ⬆️ Upgrading
 
+- **1.0.4** — installing the module with Composer installs the Fortify core with it. Nothing changes on an existing site.
 - **1.0.3** — an IPv6 address is blocked however it is written (`2001:db8::1` and `2001:0db8:0:0:0:0:0:1` are the same address). Saving a list is refused when one of its subnets covers your own address, as it already was for the address itself. The module's defaults are set even when another Fortify module set up the firewall settings first, and a saved list applies at once.
 
 ## ⚠️ Good to know
@@ -99,5 +100,5 @@ make test.coverage  # Pest with coverage (90 % minimum)
 make ready          # everything above
 ```
 
-Every pull request runs the same checks on GitHub Actions, plus a syntax check on PHP 8.2 and a run against the latest core. Pushing a tag that matches the last version in `updates/version.yaml` releases it to the October CMS marketplace once CI has passed.
+Every pull request runs the same checks on GitHub Actions, plus a syntax check on PHP 8.2 and a run against the latest core. Pushing a tag that matches the last version in `updates/version.yaml` publishes it as a GitHub release and to the October CMS marketplace once CI has passed.
 
