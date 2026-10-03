@@ -76,6 +76,7 @@ php artisan wobqqq.fortify:ip-blocker:disable
 
 ## ⬆️ Upgrading
 
+- **1.0.5** — internal refactoring. Nothing changes on an existing site.
 - **1.0.4** — installing the module with Composer installs the Fortify core with it. Nothing changes on an existing site.
 - **1.0.3** — an IPv6 address is blocked however it is written (`2001:db8::1` and `2001:0db8:0:0:0:0:0:1` are the same address). Saving a list is refused when one of its subnets covers your own address, as it already was for the address itself. The module's defaults are set even when another Fortify module set up the firewall settings first, and a saved list applies at once.
 
